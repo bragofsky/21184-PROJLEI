@@ -1,0 +1,88 @@
+﻿<head>
+    <title>CR8ACJ Hamradio</title>
+    <style>
+        /*Definição da formatação do conteudo de "body"*/
+        body {
+            background-color: #e1e1e1;
+            margin: 0;
+            padding: 0;
+            font-family: Arial;
+        }
+        /* Definição do cabeçalho da página inicial*/
+        .header {
+            padding: 1px 20px;
+            text-align: left;
+            background: #616a6b;
+        }
+            .header h1 {
+                font-size: 40px;
+            }
+        /* Definição do menu de navegação */
+        .menu {
+            overflow: hidden;
+            background-color: #616a6b;
+        }
+
+            /* Defnição dos blocos dos links disponiveis no menu */
+            .menu a {
+                float: left;
+                display: block;
+                color: #f2f2f2;
+                text-align: center;
+                padding: 14px 20px;
+            }
+                /* Definição da cor de destaque com o ponteiro do rato */
+                .menu a:hover {
+                    background-color: #ddd;
+                    color: black;
+                }
+        /*Definição da moldura que onde vão abrir todas as páginas do site*/
+        .frame {
+            display: block;
+            height: 70vh;
+            width: 100vw;
+            padding: 0;
+            border: 0;
+        }
+        /*Definição do rodapé da página inicial*/
+        .footer {
+            background-color: #616a6b;
+            color: white;
+            text-align: center;
+        }
+            .footer p {
+                font-size: 15px;
+            }
+        /*Definição da formatação dos comentarios explicativos*/
+        .comments {
+            text-align: left;
+            background: #e1e1e1;
+        }
+            .comments pre {
+                font-size: 14px;
+
+            }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>CR8ACJ HamRadio</h1>
+    </div>
+
+    <div class="menu">
+        <a href="home.html" target="frame">Home</a>
+        <a href="reps.html" target="frame">Azores Rep. List</a>
+        <a href="qrz.html" target="frame">QRZ Search</a>
+        <a href="solar.html" target="frame">Solar Activity</a>
+        <a href="about.html" target="frame">About</a>
+    </div>
+
+    <iframe src="home.html" class="frame" name="frame" title="Initial frame"></iframe>
+
+    <div class="footer">
+        <p>2021 &copy bragofsky</p>
+    </div>
+
+</body>
+</html>
