@@ -12,17 +12,8 @@ body{
 
 /* Definição das colunas */
 .column {
-    width: 50%;
-    height: 50%;
+    width: 100%;
 }
-    .left{
-        float: left;
-        transform: translateY(30%);
-    }
-    .right{
-        float: right;
-        transform: translateY(100%);
-    }
 /* Definição das rodapé */
 .footer {
     font-size: 80%;
@@ -33,6 +24,8 @@ body{
 /* Definição de formulário */
 .input{
     background-color: white;
+    height: 30px;
+    width: 160px;
 }
 
 .dot {

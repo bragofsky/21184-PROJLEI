@@ -5,7 +5,6 @@
  * bragofsky 2022
  */
 
-#include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 #include <Bridge.h>
 #include <BridgeServer.h>
@@ -28,43 +27,43 @@ const int PIN_RELAY_CCW = 11;
 const int PIN_BUTTON_CW = 7;
 const int PIN_BUTTON_CCW = 9;
 const int PIN_BUTTON_LR = 10;
-
 const int PIN_POT = A2;
 
-int softAzimuth = 977;                //Variavel global para guardar o valor de azimute recebido por software
+int softAzimuth=977;                    //Variavel global para guardar o valor de azimute recebido por software
 
-void setup() {
+void setup(){
   
   Serial.begin(9600);                     //Iniciar porta serie arduino
+
+  lcd.init();                             //inicia comunicação com display
+  lcd.backlight();                        //liga a iluminação do display
+  lcd.setCursor(0, 1);                    
+  lcd.print("    Please Wait!    ");
+  lcd.setCursor(0, 2);                    //Escreve booting no lcd enquanto processos iniciam
+  lcd.print("  Starting Bridge!  ");
+
+  digitalWrite(13, LOW);                  //desliga led 13 para monitorizar bridge
+  Bridge.begin();                         //inicia bridge
+  digitalWrite(13, HIGH);                 //liga led 13 quando bridge inicia 
+  server.listenOnLocalhost();             //inicia escuta de ligações do localhost
+  server.begin();                         //inicia server
+
   pinMode(PIN_RELAY_CW, OUTPUT);          //definição pin output relé CW
   pinMode(PIN_RELAY_CCW, OUTPUT);         //definição pin output relé CCW
   pinMode(PIN_BUTTON_CW, INPUT);          //definição pin input botão CW
   pinMode(PIN_BUTTON_CCW, INPUT);         //definição pin input botão CCW
   pinMode(PIN_BUTTON_LR, INPUT);          //definição pin input botão Local/Remote
- // pinMode(13, OUTPUT);                    //definição led status bridge
+  pinMode(13, OUTPUT);                    //definição led status bridge
 
-  lcd.init();                   // INICIA A COMUNICAÇÃO COM O DISPLAY
-  lcd.backlight();                // LIGA A ILUMINAÇÃO DO DISPLAY
-  lcd.setCursor(2, 0);
-  lcd.print("Rotor Controller");
+  lcd.setCursor(0, 0);                    //linhas seguintes definem texto estatico do display
+  lcd.print("  Rotor Controller  ");
   lcd.setCursor(0, 1);
-  lcd.print("Mode:");
+  lcd.print("Mode:               ");
   lcd.setCursor(0, 2);
-  lcd.print("Status:");
+  lcd.print("Status:             ");
   lcd.setCursor(0, 3);
-  lcd.print("Azimuth:");
-
-  // Bridge startup
-  digitalWrite(13, LOW);
-  Bridge.begin();
-  digitalWrite(13, HIGH);
-  // Listen for incoming connection only from localhost
-  // (no one from the external network could connect)
-  server.listenOnLocalhost();
-  server.begin();
-
+  lcd.print("Azimuth:            ");
 }
-
 int buttonState(int BUTTON){              //Verifica o estado do botão recebido como argumento
 
   int buttonstate = 0;
@@ -76,7 +75,6 @@ int buttonState(int BUTTON){              //Verifica o estado do botão recebido
   else
     return 0;
 }
-
 void relayOnOff(int RELAY, int STATE){      // Controla relé mediante o estado e porta recebidos como argumento
 
   if(STATE == 0)
@@ -85,8 +83,7 @@ void relayOnOff(int RELAY, int STATE){      // Controla relé mediante o estado 
     digitalWrite(RELAY,LOW);              // turn the relay OFF
 
 }
-
-int readpot() {                   //Ler o valor do potenciometro do motor e converter para azimute, serve para limitar o fim e inicio do movimento
+int readpot(){                   //Ler o valor do potenciometro do motor e converter para azimute, serve para limitar o fim e inicio do movimento
 
   int potVal;
   int angle;
@@ -101,7 +98,6 @@ int readpot() {                   //Ler o valor do potenciometro do motor e conv
   return potVal;
   
 }
-
 int azimuthVal(){                     //Retornar o valor de azimute do motor
   
   int potVal, angle;
@@ -118,7 +114,6 @@ int azimuthVal(){                     //Retornar o valor de azimute do motor
     return angle;
   }
 }
-
 void readSerialARS(){                   //Ler a porta serie, retirar os dois primeiros caracteres e converter o valor para inteiro
 
   char output[3]={0,0,0};                   //Vetor de char's para guardar o valor de azimute
@@ -138,14 +133,12 @@ void readSerialARS(){                   //Ler a porta serie, retirar os dois pri
     }
   }
 }
-
 void setLcd(int COLUNA, int LINHA, String INFO){  //Print's various info in LCD
   
   lcd.setCursor(COLUNA, LINHA);
   lcd.print(INFO);
   
 }
-
 void setQuadrante(){                    //Função para mostrar o quadrante no LCD mediante info de azimute
   
   if (azimuthVal() >= 0 && azimuthVal() <= 90){
@@ -161,7 +154,6 @@ void setQuadrante(){                    //Função para mostrar o quadrante no L
     setLcd(12,3," NW");
   }
 }
-
 void set3digit(){                     //Função que acrescenta zeros antes das dezenas e unidades do valor de azimute
   if (azimuthVal() >=100){
     lcd.setCursor(9, 3);
@@ -180,186 +172,98 @@ void set3digit(){                     //Função que acrescenta zeros antes das 
     lcd.print(azimuthVal());
   }
 }
-
-void process(BridgeClient client) {
-  // read the command
-  String command = client.readStringUntil('/');
-  // is "digital" command?
-  if (command == "digital") {
-    digitalCommand(client);
-  }
-  // is "analog" command?
-  if (command == "analog") {
-    analogCommand(client);
-  }
-  // is "mode" command?
-  if (command == "mode") {
-    modeCommand(client);
-  }
-}
-
-void digitalCommand(BridgeClient client) {
-  int pin, value;
-  // Read pin number
-  pin = client.parseInt();
-  // If the next character is a '/' it means we have an URL
-  // with a value like: "/digital/13/1"
-  if (client.read() == '/') {
-    value = client.parseInt();
-    digitalWrite(pin, value);
-  } else {
-    value = digitalRead(pin);
-  }
-  // Send feedback to client
-  client.print(F("Pin D"));
-  client.print(pin);
-  client.print(F(" set to "));
-  client.println(value);
-  // Update datastore key with the current pin value
-  String key = "D";
-  key += pin;
-  Bridge.put(key, String(value));
-}
-
-void analogCommand(BridgeClient client) {
-  int pin, value;
-  // Read pin number
-  pin = client.parseInt();
-  // If the next character is a '/' it means we have an URL
-  // with a value like: "/analog/5/120"
-  if (client.read() == '/') {
-    // Read value and execute command
-    value = client.parseInt();
-    analogWrite(pin, value);
-    // Send feedback to client
-    client.print(F("Pin D"));
-    client.print(pin);
-    client.print(F(" set to analog "));
-    client.println(value);
-    // Update datastore key with the current pin value
-    String key = "D";
-    key += pin;
-    Bridge.put(key, String(value));
-  } else {
-    // Read analog pin
-    value = analogRead(pin);
-    // Send feedback to client
-    client.print(F("Pin A"));
-    client.print(pin);
-    client.print(F(" reads analog "));
-    client.println(value);
-    // Update datastore key with the current pin value
-    String key = "A";
-    key += pin;
-    Bridge.put(key, String(value));
-  }
-}
-
-void modeCommand(BridgeClient client) {
-  int pin;
-  // Read pin number
-  pin = client.parseInt();
-  // If the next character is not a '/' we have a malformed URL
-  if (client.read() != '/') {
-    client.println(F("error"));
-    return;
-  }
-  String mode = client.readStringUntil('\r');
-  if (mode == "input") {
-    pinMode(pin, INPUT);
-    // Send feedback to client
-    client.print(F("Pin D"));
-    client.print(pin);
-    client.print(F(" configured as INPUT!"));
-    return;
-  }
-
-  if (mode == "output") {
-    pinMode(pin, OUTPUT);
-    // Send feedback to client
-    client.print(F("Pin D"));
-    client.print(pin);
-    client.print(F(" configured as OUTPUT!"));
-    return;
-  }
-  client.print(F("error: invalid mode "));
-  client.print(mode);
-}
-
-void loop() {
+void loop(){
   
-  setQuadrante();                 //Write azimuth information in LCD
-  set3digit();                  //Add/print zeros to azimuth value in LCD
+  setQuadrante();                                                                   //Escreve informação do azimute no LCD
+  set3digit();                                                                      //Adiciona zeros ao valor de azimute no LCD
   
-  //Serial.println(readpot());
-  
-  // if(buttonState(PIN_BUTTON_LR) == 1){        //Modo de controlo com pushbuttons
-  
-  //   setLcd(6,1,"Local ");               //Escreve local na linha de modo
+  if(buttonState(PIN_BUTTON_LR) == 1){                                              //Modo de controlo com pushbuttons
 
-  //   if(buttonState(PIN_BUTTON_CW) == 1 && buttonState(PIN_BUTTON_CCW) == 0){  //Garante que o relé é ativado apenas quando o botão CW é premido
+    setLcd(6,1,"Local ");                                                           //Escreve local na linha de modo
 
-  //     if(readpot() >= 880){         //Limita o fim de curso superior
-  //       relayOnOff(PIN_RELAY_CW,0);     //Impede que o relé se ative se for ultrapassado o limite
-  //     }
-  //     else{
-  //       relayOnOff(PIN_RELAY_CW,1);     //Ativa o relé CW até ao limite definido acima
-  //     } 
-  //     setLcd(8,2,"Moving CW ");           //Escreve "Moving CW " na linha de modo 
+    if(buttonState(PIN_BUTTON_CW) == 1 && buttonState(PIN_BUTTON_CCW) == 0){        //Garante que o relé é ativado apenas quando o botão CW é premido
+      if(readpot() >= 880){                                                         //Limita o fim de curso superior
+        relayOnOff(PIN_RELAY_CW,0);                                                 //Impede que o relé se ative se for ultrapassado o limite
+      }
+      else{
+        relayOnOff(PIN_RELAY_CW,1);                                                 //Ativa o relé CW até ao limite definido acima
+      } 
+      setLcd(8,2,"Moving CW ");                                                     //Escreve "Moving CW " na linha de modo 
+    }
+    if(buttonState(PIN_BUTTON_CCW) == 1 && buttonState(PIN_BUTTON_CW) == 0){        //Garante que o relé é ativado apenas quando o botão CCW é premido
+      if(readpot() <= 20){                                                          //Limita o fim de curso inferior
+        relayOnOff(PIN_RELAY_CCW,0);                                                //Impede que o relé se ative se for ultrapassado o limite
+      }
+      else{
+        relayOnOff(PIN_RELAY_CCW,1);                                                //Ativa o relé CW até ao limite definido acima
+      }
+      setLcd(8,2,"Moving CCW");                                                     //Escreve "Moving CCW" na linha de modo 
+    }
+    if (buttonState(PIN_BUTTON_CCW) == 0 && buttonState(PIN_BUTTON_CW) == 0){       //Quando ambos os pushbuttons estão a zero
+      relayOnOff(PIN_RELAY_CW,0);                                                   //desativa o botão CW
+      relayOnOff(PIN_RELAY_CCW,0);                                                  //e o botão CCW
+      setLcd(8,2,"Stopped   ");                                                     //Escreve "Stopped   " na linha de modo 
+    }
+  }
+  if(buttonState(PIN_BUTTON_LR) == 0){                                              //Modo de controlo por software
 
-  //   }
-  //   else if(buttonState(PIN_BUTTON_CCW) == 1 && buttonState(PIN_BUTTON_CW) == 0){ //Garante que o relé é ativado apenas quando o botão CCW é premido
+  setLcd(6,1,"Remote");
+  setQuadrante();                                                                   //Escreve informação do azimute no LCD
+  set3digit();                                                                      //Adiciona zeros ao valor de azimute no LCD
 
-  //     if(readpot() <= 20){          //Limita o fim de curso inferior
-  //       relayOnOff(PIN_RELAY_CCW,0);    //Impede que o relé se ative se for ultrapassado o limite
-  //     }
-        
-  //     else{
-  //       relayOnOff(PIN_RELAY_CCW,1);    //Ativa o relé CW até ao limite definido acima
-  //     }
-  //     setLcd(8,2,"Moving CCW");           //Escreve "Moving CCW" na linha de modo 
-  //   }
+  BridgeClient client = server.accept();                                            // Recebe clientes
+    
+    if (client) {                                                                     // Se cliente for true
+      
+      String command = client.readStringUntil('/');                                   // Guarda a string para servir de condição
+      
+      // is "relayCCW" command?
+      if (command == "relayCCW") {
+        int stat = client.parseInt();
+        if (stat == 1) {
+          relayOnOff(PIN_RELAY_CCW,1);   
+          setLcd(8,2,"Moving CCW ");                                                  //Escreve "Moving CW " na linha de modo  
+        } 
+        else {
+          relayOnOff(PIN_RELAY_CCW,0);
+          setLcd(8,2,"Stopped   ");                                                   //Escreve "Stopped   " na linha de modo
+        }
+      }
 
-  //   else if (buttonState(PIN_BUTTON_CCW) == 0 && buttonState(PIN_BUTTON_CW) == 0){  //Quando ambos os pushbuttons estão a zero
-  //     relayOnOff(PIN_RELAY_CW,0);     //desativa o botão CW
-  //     relayOnOff(PIN_RELAY_CCW,0);      //e o botão CCW
-  //     setLcd(8,2,"Stopped   ");           //Escreve "Stopped   " na linha de modo 
-  //   }
-  // }
-  // else if(buttonState(PIN_BUTTON_LR) == 0){   //Modo de controlo por software
+      // is "relayCW" command?
+      if (command == "relayCW") {
+        int stat = client.parseInt();
+        if (stat == 1) {
+          relayOnOff(PIN_RELAY_CW,1);  
+          setLcd(8,2,"Moving CW ");                                                    //Escreve "Moving CW " na linha de modo   
+        } 
+        else {
+          relayOnOff(PIN_RELAY_CW,0);
+          setLcd(8,2,"Stopped   ");                                                    //Escreve "Stopped   " na linha de modo
+        }
+      }
 
-    setLcd(6,1,"Remote");
-
-    // Get clients coming from server
-    BridgeClient client = server.accept();
-    // There is a new client?
-    if (client) {
-      // Process request
-      process(client);
+      //is "azimuth" command?
+      if (command == "azimuth") {
+        softAzimuth = client.parseInt();
+        if(azimuthVal()==softAzimuth  || softAzimuth==977){
+          relayOnOff(PIN_RELAY_CCW,0);
+          relayOnOff(PIN_RELAY_CW,0);
+          setLcd(8,2,"Stopped   ");          //Escreve "Stopped   " na linha de modo
+        }
+        if(azimuthVal()<softAzimuth){
+            relayOnOff(PIN_RELAY_CW,1);
+            setLcd(8,2,"Moving CW ");          //Escreve "Moving CW " na linha de modo
+        }
+        if(azimuthVal()>softAzimuth){                          
+            relayOnOff(PIN_RELAY_CCW,1);
+            setLcd(8,2,"Moving CCW");          //Escreve "Moving CCW" na linha de modo                                                         
+        }
+      }
       // Close connection and free resources.
       client.stop();
     }
     delay(50); // Poll every 50ms
-
-
-    
-
-    //   readSerialARS();
-
-    //   if(azimuthVal()==softAzimuth  || softAzimuth==977){
-    //     relayOnOff(PIN_RELAY_CCW,0);
-    //     relayOnOff(PIN_RELAY_CW,0);
-    //     setLcd(8,2,"Stopped   ");          //Escreve "Stopped   " na linha de modo
-
-    //   } 
-    //   else if(azimuthVal()<softAzimuth){
-    //     relayOnOff(PIN_RELAY_CW,1);
-    //     setLcd(8,2,"Moving CW ");          //Escreve "Moving CW " na linha de modo
-
-    //   }
-    //   else if(azimuthVal()>softAzimuth){
-    //     relayOnOff(PIN_RELAY_CCW,1);
-    //     setLcd(8,2,"Moving CCW");          //Escreve "Moving CCW" na linha de modo
-    //   }
-  //}
+  }
+  
 }
